@@ -25,31 +25,29 @@ if 'search_ip' not in st.session_state:
 
 # Function to get location from IP address
 def get_location_from_ip(ip_address):
+    """Gets location data from an IP address using ip-api.com."""
     try:
-        # Using ip-api.com for IP geolocation (free service, more reliable)
         response = requests.get(f'http://ip-api.com/json/{ip_address}', timeout=10)
-        st.write(f"Debug: Response status: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            st.write(f"Debug: API Response: {data}")
-            
-            if data.get('status') == 'success' and 'lat' in data and 'lon' in data:
-                return {
-                    'lat': data['lat'],
-                    'lon': data['lon'],
-                    'city': data.get('city', 'Unknown'),
-                    'country': data.get('country', 'Unknown'),
-                    'region': data.get('regionName', 'Unknown'),
-                    'isp': data.get('isp', 'Unknown')
-                }
-            else:
-                st.error(f"API Error: {data.get('message', 'Unknown error')}")
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+        data = response.json()
+
+        if data.get('status') == 'success' and 'lat' in data and 'lon' in data:
+            return {
+                'lat': data['lat'],
+                'lon': data['lon'],
+                'city': data.get('city', 'Unknown'),
+                'country': data.get('country', 'Unknown'),
+                'region': data.get('regionName', 'Unknown'),
+                'isp': data.get('isp', 'Unknown')
+            }
         else:
-            st.error(f"HTTP Error: {response.status_code}")
-            
-    except Exception as e:
-        st.error(f"Error getting location: {e}")
+            st.error(f"API Error: {data.get('message', 'Unknown error from API')}")
+
+    except requests.exceptions.HTTPError as e:
+        st.error(f"HTTP Error: {e}")
+    except requests.exceptions.RequestException as e:
+        st.error(f"Network Error while getting location: {e}")
+
     return None
 
 # IP address input
@@ -65,6 +63,20 @@ if reset_button:
     st.session_state.ip_location = None
     st.session_state.search_ip = None
     st.rerun()
+
+# Handle IP search
+if search_button and ip_input:
+    with st.spinner('IP位置を検索中...'):
+        ip_location_data = get_location_from_ip(ip_input)
+        if ip_location_data:
+            st.session_state.ip_location = ip_location_data
+            st.session_state.search_ip = ip_input
+            st.success(f"IP {ip_input} の位置情報を取得しました。")
+        else:
+            st.error("IPアドレスの位置情報を取得できませんでした。")
+            # Clear previous results if search fails
+            st.session_state.ip_location = None
+            st.session_state.search_ip = None
 
 # Display current IP location info in sidebar
 if st.session_state.ip_location:

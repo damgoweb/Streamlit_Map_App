@@ -6,6 +6,15 @@ import requests
 # Set page config for wide layout
 st.set_page_config(page_title="Map App", layout="wide")
 
+# Inject custom CSS to reduce top padding
+st.markdown("""
+    <style>
+    div.block-container {
+        padding-top: 1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 st.title('Streamlit Map App')
 
 # Initialize session state

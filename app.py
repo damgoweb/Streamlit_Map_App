@@ -177,8 +177,8 @@ if input_method == "IPアドレス":
                 fillOpacity=0.3
             ).add_to(m)
             
-            # 地図を表示
-            folium_static(m, use_container_width=True, height=600)
+            # 地図を表示 - 修正済み
+            st.components.v1.html(m._repr_html_(), height=600)
             
             # 詳細情報を表示
             st.success("✅ 位置情報を取得しました")
@@ -256,8 +256,8 @@ elif input_method == "緯度・経度":
             opacity=0.5
         ).add_to(m)
         
-        # 地図を表示
-        folium_static(m, width=700, height=500)
+        # 地図を表示 - 修正済み
+        st.components.v1.html(m._repr_html_(), height=600)
         
         # 詳細情報を表示
         st.success("✅ 地図に位置を表示しました")
@@ -305,8 +305,8 @@ elif input_method == "都市名":
                 icon=folium.Icon(color='blue', icon='star')
             ).add_to(m)
             
-            # 地図を表示
-            folium_static(m, width=700, height=500)
+            # 地図を表示 - 修正済み
+            st.components.v1.html(m._repr_html_(), height=600)
             
             # 詳細情報を表示
             st.success("✅ 都市の位置情報を取得しました")
@@ -329,30 +329,9 @@ else:  # 複数地点入力
             columns=['名前', 'タイプ', '値', '緯度', '経度']
         )
     
-    # データテーブルを表示
-    if not st.session_state.points_data.empty:
-        st.subheader("登録済みの地点")
-        st.dataframe(st.session_state.points_data, use_container_width=True)
-        
-        if st.button("🗺️ 地図に表示", type="primary"):
-            # 地図を作成
-            center_lat = st.session_state.points_data['緯度'].mean()
-            center_lon = st.session_state.points_data['経度'].mean()
-            m = create_base_map(center=[center_lat, center_lon], zoom=10)
-            
-            # マーカーを追加
-            for idx, row in st.session_state.points_data.iterrows():
-                folium.Marker(
-                    [row['緯度'], row['経度']],
-                    popup=f"{row['名前']}<br>{row['タイプ']}: {row['値']}",
-                    tooltip=row['名前']
-                ).add_to(m)
-            
-            folium_static(m, width=700, height=500)
-    
     # 新しい地点を追加
     with st.expander("➕ 新しい地点を追加", expanded=True):
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns([1, 1, 2, 1])
         
         with col1:
             point_name = st.text_input("地点名", placeholder="例: 本社")
@@ -369,37 +348,146 @@ else:  # 複数地点入力
             elif point_type == "IPアドレス":
                 point_value = st.text_input("IPアドレス", placeholder="例: 8.8.8.8")
             else:
-                lat_input = st.number_input("緯度", format="%.4f", value=35.6762)
-                lon_input = st.number_input("経度", format="%.4f", value=139.6503)
+                col3_1, col3_2 = st.columns(2)
+                with col3_1:
+                    lat_input = st.number_input("緯度", format="%.4f", value=35.6762)
+                with col3_2:
+                    lon_input = st.number_input("経度", format="%.4f", value=139.6503)
                 point_value = f"{lat_input},{lon_input}"
         
-        if st.button("追加", type="primary"):
-            if point_name and point_value:
-                # 位置情報を取得
-                loc = None
-                if point_type == "都市名":
-                    time.sleep(1)  # レート制限対策
-                    loc = get_location_from_city(point_value)
-                elif point_type == "IPアドレス":
-                    loc = get_location_from_ip(point_value)
-                else:  # 緯度経度
-                    lat, lon = point_value.split(',')
-                    loc = {'lat': float(lat), 'lon': float(lon)}
-                
-                if loc:
-                    new_row = pd.DataFrame([{
-                        '名前': point_name,
-                        'タイプ': point_type,
-                        '値': point_value,
-                        '緯度': loc['lat'],
-                        '経度': loc['lon']
-                    }])
-                    st.session_state.points_data = pd.concat(
-                        [st.session_state.points_data, new_row],
-                        ignore_index=True
-                    )
-                    st.success(f"✅ '{point_name}' を追加しました")
-                    st.rerun()
+        with col4:
+            st.write("")
+            st.write("")
+            if st.button("追加", type="primary", use_container_width=True):
+                if point_name and point_value:
+                    # 位置情報を取得
+                    if point_type == "都市名":
+                        time.sleep(1)  # レート制限対策
+                        loc = get_location_from_city(point_value)
+                        if loc:
+                            new_row = pd.DataFrame([{
+                                '名前': point_name,
+                                'タイプ': point_type,
+                                '値': point_value,
+                                '緯度': loc['lat'],
+                                '経度': loc['lon']
+                            }])
+                            st.session_state.points_data = pd.concat(
+                                [st.session_state.points_data, new_row],
+                                ignore_index=True
+                            )
+                            st.success(f"✅ '{point_name}' を追加しました")
+                            st.rerun()
+                    elif point_type == "IPアドレス":
+                        loc = get_location_from_ip(point_value)
+                        if loc:
+                            new_row = pd.DataFrame([{
+                                '名前': point_name,
+                                'タイプ': point_type,
+                                '値': point_value,
+                                '緯度': loc['lat'],
+                                '経度': loc['lon']
+                            }])
+                            st.session_state.points_data = pd.concat(
+                                [st.session_state.points_data, new_row],
+                                ignore_index=True
+                            )
+                            st.success(f"✅ '{point_name}' を追加しました")
+                            st.rerun()
+                    else:  # 緯度経度
+                        lat, lon = point_value.split(',')
+                        new_row = pd.DataFrame([{
+                            '名前': point_name,
+                            'タイプ': point_type,
+                            '値': point_value,
+                            '緯度': float(lat),
+                            '経度': float(lon)
+                        }])
+                        st.session_state.points_data = pd.concat(
+                            [st.session_state.points_data, new_row],
+                            ignore_index=True
+                        )
+                        st.success(f"✅ '{point_name}' を追加しました")
+                        st.rerun()
+    
+    # 登録された地点を表示
+    if not st.session_state.points_data.empty:
+        st.subheader("登録済みの地点")
+        
+        # データテーブルを表示
+        edited_df = st.data_editor(
+            st.session_state.points_data,
+            hide_index=True,
+            use_container_width=True,
+            disabled=['緯度', '経度']
+        )
+        
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("🗺️ 地図に表示", type="primary", use_container_width=True):
+                if not edited_df.empty:
+                    # 中心座標を計算
+                    center_lat = edited_df['緯度'].mean()
+                    center_lon = edited_df['経度'].mean()
+                    
+                    # 地図を作成
+                    m = create_base_map(center=[center_lat, center_lon], zoom=10)
+                    
+                    # 各地点にマーカーを追加
+                    colors = ['red', 'blue', 'green', 'purple', 'orange', 
+                             'darkred', 'lightred', 'beige', 'darkblue', 'darkgreen']
+                    
+                    for idx, row in edited_df.iterrows():
+                        color = colors[idx % len(colors)]
+                        
+                        # アイコンを設定
+                        if row['タイプ'] == 'IPアドレス':
+                            icon = 'wifi'
+                        elif row['タイプ'] == '都市名':
+                            icon = 'home'
+                        else:
+                            icon = 'map-marker'
+                        
+                        folium.Marker(
+                            [row['緯度'], row['経度']],
+                            popup=f"""
+                            <b>{row['名前']}</b><br>
+                            <b>タイプ:</b> {row['タイプ']}<br>
+                            <b>値:</b> {row['値']}<br>
+                            <b>緯度:</b> {row['緯度']:.4f}<br>
+                            <b>経度:</b> {row['経度']:.4f}
+                            """,
+                            tooltip=row['名前'],
+                            icon=folium.Icon(color=color, icon=icon)
+                        ).add_to(m)
+                    
+                    # すべての地点を含むように境界を調整
+                    sw = edited_df[['緯度', '経度']].min().values.tolist()
+                    ne = edited_df[['緯度', '経度']].max().values.tolist()
+                    m.fit_bounds([sw, ne])
+                    
+                    # 地図を表示 - 修正済み
+                    st.components.v1.html(m._repr_html_(), height=600)
+        
+        with col2:
+            if st.button("🗑️ すべてクリア", use_container_width=True):
+                st.session_state.points_data = pd.DataFrame(
+                    columns=['名前', 'タイプ', '値', '緯度', '経度']
+                )
+                st.rerun()
+        
+        with col3:
+            # CSVダウンロード機能
+            csv = edited_df.to_csv(index=False, encoding='utf-8')
+            st.download_button(
+                label="📥 CSVとしてダウンロード",
+                data=csv.encode('utf-8'),
+                file_name="locations.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    else:
+        st.info("👆 上のフォームから地点を追加してください")
 
 # フッター
 st.sidebar.markdown("---")

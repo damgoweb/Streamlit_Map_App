@@ -178,7 +178,7 @@ if input_method == "IPアドレス":
             ).add_to(m)
             
             # 地図を表示
-            folium_static(m, width=700, height=500)
+            folium_static(m, use_container_width=True, height=600)
             
             # 詳細情報を表示
             st.success("✅ 位置情報を取得しました")
